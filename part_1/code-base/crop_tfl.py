@@ -12,7 +12,7 @@ from typing import List
 import consts as C  # TODO: really?
 
 
-def make_crop(x, y, color, zoom, *args, **kwargs):
+def make_crop(x, y, color, diameter, *args, **kwargs):
     """
     The function that creates the crops from the image.
     Your return values from here should be the coordinates of the crops in this format (x0, x1, y0, y1, crop content):
@@ -21,11 +21,24 @@ def make_crop(x, y, color, zoom, *args, **kwargs):
     'y0'  The smaller y value (the lower corner)
     'y1'  The bigger y value (the higher corner)
     """
-    # Define the size of the crop region around the TFL
-    crop_width = C.DEFAULT_CROPS_W
-    crop_height = C.DEFAULT_CROPS_H
+    # Define the default size of the crop region around the TFL
+    DEFAULT_CROPS_W = 32
+    DEFAULT_CROPS_H = 96
+
+    # Use the diameter to determine the cropping size
+    if diameter > 24:
+        crop_factor = 1
+    elif diameter > 12:
+        crop_factor = 0.5
+    else:
+        crop_factor = 0.25
+
+    adjusted_crop_width = DEFAULT_CROPS_W * crop_factor
+    adjusted_crop_height = DEFAULT_CROPS_H * crop_factor
+
     y0_offset = 0
     y1_offset = 0
+
     # Adjust y0 offset and y1 offset based on color
     if color == 'r':
         y0_offset = 1 / 3
@@ -34,11 +47,11 @@ def make_crop(x, y, color, zoom, *args, **kwargs):
         y0_offset = 2 / 3
         y1_offset = 1 / 3
 
-    # Calculate the default cropping region around the TFL
-    x0 = int(x - crop_width // 2)
-    x1 = int(x + crop_width // 2)
-    y0 = int(y - (crop_height * y0_offset))
-    y1 = int(y + (crop_height * y1_offset))
+    # Calculate the cropping region around the TFL based on diameter
+    x0 = int(x - (adjusted_crop_width / 2))
+    x1 = int(x + (adjusted_crop_width / 2))
+    y0 = int(y - (adjusted_crop_height * y0_offset))
+    y1 = int(y + (adjusted_crop_height * y1_offset))
 
     return x0, x1, y0, y1, 'crop_data'
 
@@ -118,28 +131,25 @@ def create_crops(df: DataFrame, IGNOR=None) -> DataFrame:
         # Check crop rectangle if it TFL or not, ignore if it parts of TFL, double TFL,
         result_template[C.IS_TRUE], result_template[C.IS_IGNORE] = check_crop(image_json_path, x0, x1, y0, y1)
 
-        # Create unique path for crop TFL
-        if result_template[C.IS_IGNORE]:
-            tag = 'i'
-        else:
-            tag = 'T' if result_template[C.IS_TRUE] else 'F'
-
-        crop_path = f'code-base/data/crops/{image_path[:-4]}_{row[C.COL]}{tag}_{index}'
-
-        # Save unique path
-        result_template[C.CROP_PATH] = crop_path
+        # Create unique path for crop TFL and save it
+        tag = 'i' if result_template[C.IS_IGNORE] else 'T' if result_template[C.IS_TRUE] else 'F'
+        crop_name = f'{image_path[:-4]}_{row[C.COL]}{tag}_{index}.png'
+        result_template[C.CROP_PATH] = crop_name
 
         # Create a DataFrame with the current result_template data
         result_row_df = pd.DataFrame(result_template, index=[index])
 
         # Concatenate the current row DataFrame with the existing result DataFrame
         result_df = pd.concat([result_df, result_row_df], ignore_index=True)
-        if result_template[C.IS_TRUE] or not result_template[C.IS_IGNORE]: # TODO: only ignore = false
+        # if result_template[C.IS_TRUE] or not result_template[C.IS_IGNORE]:
+        if result_template[C.IS_TRUE]:  # TODO: only ignore = false
             # Extract image_path and open the image
             image_path = row[C.CROP_PATH]
             image = Image.open(C.PART_IMAGE_SET / C.IMAGES_1 / image_path)
             # Crop the image using the coordinates
             cropped_image = image.crop((x0, y0, x1, y1))
+            # Resize the cropped image to 32x96 dimensions
+            cropped_image = cropped_image.resize((32, 96))
             # Save cropped image
             full_path = C.CROP_DIR / f'{image_path[:-4]}_{row[C.COL]}{tag}_{index}.png'
             print(f"Saving to: {full_path}")

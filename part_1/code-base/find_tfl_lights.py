@@ -255,7 +255,7 @@ def extract_tfl_coordinates(image: np.array, image_path: str, image_json_path, i
 
     zoom_values = calculate_zoom(red_diameters + green_diameters)
 
-    for x, y, color, diameter, zoom in zip(red_x, red_y, ['r'] * len(red_x), red_diameters, zoom_values[:len(red_x)]):
+    for x, y, color, diameter in zip(red_x, red_y, ['r'] * len(red_x), red_diameters):
         data.append({
             "seq": counter,
             "path": image_path,
@@ -263,12 +263,11 @@ def extract_tfl_coordinates(image: np.array, image_path: str, image_json_path, i
             "gtim_path": image_GT_path,
             "x": x,
             "y": y,
-            "zoom": zoom,
+            "zoom": diameter,
             "col": color
         })
         counter += 1
-    for x, y, color, diameter, zoom in zip(green_x, green_y, ['g'] * len(green_x), green_diameters,
-                                           zoom_values[len(red_x):]):
+    for x, y, color, diameter in zip(green_x, green_y, ['g'] * len(green_x), green_diameters):
         data.append({
             "seq": counter,
             "path": image_path,
@@ -276,7 +275,7 @@ def extract_tfl_coordinates(image: np.array, image_path: str, image_json_path, i
             "gtim_path": image_GT_path,
             "x": x,
             "y": y,
-            "zoom": zoom,
+            "zoom": diameter,
             "col": color
         })
         counter += 1
@@ -284,4 +283,3 @@ def extract_tfl_coordinates(image: np.array, image_path: str, image_json_path, i
     csv_file = C.ATTENTION_PATH / C.ATTENTION_CSV_NAME
     save_traffic_light_coordinates_to_csv(data, str(csv_file))
 
-    return red_x, red_y, green_x, green_y, red_diameters, green_diameters
