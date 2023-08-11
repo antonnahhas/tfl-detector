@@ -30,9 +30,9 @@ def run_one_train_epoch(model: MyNeuralNetworkBase, dataset: TrafficLightDataSet
     f_weight = 1. / num_tif[2]
     weights = torch.tensor(np.where(train_dataset.crop_data[C.IS_TRUE], t_weight, f_weight))
     sampler = WeightedRandomSampler(weights, len(weights)) if balance_samples else None
-    data_loader = DataLoader(train_dataset, batch_size=16, sampler=sampler)
+    data_loader = DataLoader(train_dataset, batch_size=64, sampler=sampler)
     loss_func = model.loss_func
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     acc_loss = 0
     tot_samples = 0
     for i_batch, batch in enumerate(data_loader):
@@ -212,13 +212,11 @@ def examine_my_results(base_dir,
 
 def main():
     base_dir = C.DATA_DIR
-    print("sadsd ", base_dir)
-    full_images_dir = os.path.join(base_dir, C.PART_IMAGE_SET, C.IMAGES_1)
-    print("full ", full_images_dir)
+    full_images_dir = os.path.join(base_dir, C.FULL_IMAGES_DIR)
     model_name = 'my_model_final_3'
     train_dataset = TrafficLightDataSet(base_dir, full_images_dir, is_train=True)
     test_dataset = TrafficLightDataSet(base_dir, full_images_dir, is_train=False)
-    trained_model_path = go_train(base_dir, model_name, train_dataset, test_dataset, num_epochs=50)
+    trained_model_path = go_train(base_dir, model_name, train_dataset, test_dataset, num_epochs=70)
     examine_my_results(base_dir, full_images_dir, trained_model_path, test_dataset)
 
 
